@@ -1,0 +1,15 @@
+<resources>
+
+    <string name="app_name">MagicApplication</string>
+
+    <!-- accessToken 을 보낼 서버의 클라이언트 아이디-->
+    <!-- 근화 구글 콘솔에 MagicCalendar-Application 프로젝트 -->
+    <string name="server_client_id">167626550583-ouo1ti55snfqphcgj63gm73a9n54rde8.apps.googleusercontent.com</string>
+
+    <!-- 한이음 서버 주소 -->
+    <string name="server_url">http://169.56.98.117</string>
+
+    <!-- Calendar 를 위한 SCOPES -->
+    <string name="google_calendar_scopes">https://www.googleapis.com/auth/calendar</string>
+
+</resources>
