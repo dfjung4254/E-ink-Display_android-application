@@ -10,7 +10,6 @@ import android.widget.TextView;
 import com.jcp.magicapplication.Session.SessionJWT;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -48,9 +47,8 @@ public class MainActivity extends AppCompatActivity {
         txtName = findViewById(R.id.MainActivity_TextView_Name);
         txtCalendar = findViewById(R.id.MainActivity_TextView_Calendar);
 
-        new JSONPost(JSONPost.GET_USER_INFO, null).execute();
-        new JSONPost(JSONPost.GET_CALENDAR, null).execute();
-
+        new JSONHttpClient(JSONHttpClient.GET_USER_INFO, null, null).execute();
+        new JSONHttpClient(JSONHttpClient.GET_CALENDAR_NEXT, null, "10").execute();
 
     }
 
@@ -63,19 +61,24 @@ public class MainActivity extends AppCompatActivity {
 
     */
 
-    private class JSONPost extends AsyncTask<String, JSONObject, JSONObject> {
+    private class JSONHttpClient extends AsyncTask<String, JSONObject, JSONObject> {
 
         /* 멤버 변수 */
         private String sJwt;                                                                // 서버로 요청할 JWT 인증값
         private final String SERVER_URL = getResources().getString(R.string.server_url);                           // 서버로 연결할 서버 URL
         private final String SERVER_DIR[] = {
-            "/users/info",                                                                  // GET_USER_INFO = 0
-            "/calendar/next"                                                                // GET_CALENDAR  = 1
+                "/users/",                                                                  // GET_USER_INFO = 0
+                "/calendar/next/"                                                           // GET_CALENDAR  = 1
+        };
+        private final String SERVER_REQ_TYPE[] = {
+                "GET",                                                                      // GET_USER_INFO 요청방식
+                "GET"                                                                       // GET_CALENDAR 요청방식
         };
         private int option;                                                                 // 서버로 요청할 메서드
-        private JSONObject reqBody;
+        private JSONObject reqBody;                                                         // 요청 바디 값 POST 요청을 할 때 사용
+        private String reqParams;                                                           // 요청 파라미터 값 GET 요청을 할 때 사용
         public static final int GET_USER_INFO = 0;                                          // 유저를 받아옴
-        public static final int GET_CALENDAR = 1;                                           // 달력 10일을 받아옴.
+        public static final int GET_CALENDAR_NEXT = 1;                                           // 달력 10일을 받아옴.
 
         /*
 
@@ -83,11 +86,12 @@ public class MainActivity extends AppCompatActivity {
             서버로 보낼 요청정보를 미리 받는다.
 
         */
-        public JSONPost(int option, JSONObject reqBody){
+        public JSONHttpClient(int option, JSONObject reqBody, String reqParams){
             super();
             this.option = option;
             this.sJwt = SessionJWT.getInstance().getJwt();
             this.reqBody = reqBody;
+            this.reqParams = reqParams;
         }
 
         /*
@@ -106,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
 
                     Request 에 실어 보낼 요소들을 모아
                     JSON 객체를 받아 옴.
+                    GET 이냐 POST 방식이냐에 따라 다른 HttpURLConnection 을 사용하는 방식이 다름.
 
                 */
 
@@ -114,42 +119,80 @@ public class MainActivity extends AppCompatActivity {
 
                 try{
 
-                    /* 2번째 parameter 로 넘어온 URL 값으로 생성한 다음 해당 통신 오픈  */
-                    URL url = new URL(SERVER_URL + SERVER_DIR[option]);
-                    connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("POST");                                // 전송 방식 : POST
-                    connection.setRequestProperty("Cache-Control", "no-cache");         // 캐시 설정
-                    connection.setRequestProperty("Content-Type", "application/json");  // JSON 형식으로 전송
-                    connection.setRequestProperty("jwt", sJwt);                         // 헤더에 JWT 를 실어서 보냄(인증)
-                    connection.setDoOutput(true);                                       // Outputstream 으로 request
-                    connection.setDoInput(true);                                        // Inputstream 으로 response
-                    connection.connect();
+                    if(SERVER_REQ_TYPE[option].equals("POST")){
 
-                    /* 서버에 전송하기 위한 스트림 생성 */
-                    OutputStream outStream = connection.getOutputStream();
+                        /* 요청 방식이 POST 일 때 */
 
-                    /* write 버퍼생성 및 내용 쓰기 */
-                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outStream));
-                    if(reqBody != null){
-                        writer.write(reqBody.toString());
+                        /* 2번째 parameter 로 넘어온 URL 값으로 생성한 다음 해당 통신 오픈  */
+                        String strUrl = SERVER_URL + SERVER_DIR[option];
+                        URL url = new URL(strUrl);
+                        connection = (HttpURLConnection) url.openConnection();
+                        connection.setRequestMethod(SERVER_REQ_TYPE[option]);               // 전송 방식 : POST or GET
+                        connection.setRequestProperty("Cache-Control", "no-cache");         // 캐시 설정
+                        connection.setRequestProperty("Content-Type", "application/json");  // JSON 형식으로 전송
+                        connection.setRequestProperty("jwt", sJwt);                         // 헤더에 JWT 를 실어서 보냄(인증)
+                        connection.setDoOutput(true);                                       // Outputstream 으로 request
+                        connection.setDoInput(true);                                        // Inputstream 으로 response
+                        connection.connect();
+
+                        /* 서버에 전송하기 위한 스트림 생성 */
+                        OutputStream outStream = connection.getOutputStream();
+
+                        /* write 버퍼생성 및 내용 쓰기 */
+                        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outStream));
+                        if(reqBody != null){
+                            writer.write(reqBody.toString());
+                        }
+                        writer.flush();
+                        writer.close();
+
+                        /* 서버로 부터 데이터 수신을 위한 스트림 생성 */
+                        InputStream inStream = connection.getInputStream();
+
+                        /* read 버퍼생성 및 내용 읽기 */
+                        reader = new BufferedReader(new InputStreamReader(inStream));
+                        StringBuffer ret = new StringBuffer();
+                        String line = "";
+                        while((line = reader.readLine()) != null){
+                            ret.append(line);
+                        }
+
+                        /* 읽은 버퍼 값을 JSONObject 로 변환하여 리턴 */
+                        Log.d("*****MYTAG", "RESPONSE : "+ret.toString());
+                        return new JSONObject(ret.toString());
+
+                    }else if(SERVER_REQ_TYPE[option].equals("GET")){
+
+                        /* 요청방식이 GET 일 때 */
+                        String strUrl = SERVER_URL + SERVER_DIR[option];
+                        if(reqParams != null){
+                            strUrl += reqParams;
+                        }
+                        URL url = new URL(strUrl);
+                        connection = (HttpURLConnection) url.openConnection();
+                        connection.setRequestMethod(SERVER_REQ_TYPE[option]);               // 전송 방식 : POST or GET
+                        connection.setRequestProperty("Cache-Control", "no-cache");         // 캐시 설정
+                        connection.setRequestProperty("jwt", sJwt);                         // 헤더에 JWT 를 실어서 보냄(인증)
+                        //connection.setDoOutput(true);                                     // Outputstream 으로 request
+                        connection.setDoInput(true);                                        // Inputstream 으로 response
+                        connection.connect();
+
+                        /* 서버로 부터 데이터 수신을 위한 스트림 생성 */
+                        InputStream inStream = connection.getInputStream();
+
+                        /* read 버퍼생성 및 내용 읽기 */
+                        reader = new BufferedReader(new InputStreamReader(inStream));
+                        StringBuffer ret = new StringBuffer();
+                        String line = "";
+                        while((line = reader.readLine()) != null){
+                            ret.append(line);
+                        }
+
+                        /* 읽은 버퍼 값을 JSONObject 로 변환하여 리턴 */
+                        Log.d("*****MYTAG", "RESPONSE : "+ret.toString());
+                        return new JSONObject(ret.toString());
+
                     }
-                    writer.flush();
-                    writer.close();
-
-                    /* 서버로 부터 데이터 수신을 위한 스트림 생성 */
-                    InputStream inStream = connection.getInputStream();
-
-                    /* read 버퍼생성 및 내용 읽기 */
-                    reader = new BufferedReader(new InputStreamReader(inStream));
-                    StringBuffer ret = new StringBuffer();
-                    String line = "";
-                    while((line = reader.readLine()) != null){
-                        ret.append(line);
-                    }
-
-                    /* 읽은 버퍼 값을 JSONObject 로 변환하여 리턴 */
-                    Log.d("*****MYTAG", "RESPONSE : "+ret.toString());
-                    return new JSONObject(ret.toString());
 
                 }catch (MalformedURLException e){
                     e.printStackTrace();
@@ -210,14 +253,18 @@ public class MainActivity extends AppCompatActivity {
 
                     txtName.setText(txtChangeName);
                     break;
-                case GET_CALENDAR:
+                case GET_CALENDAR_NEXT:
                     Log.d("txtCalendarChange : ", jsonObject.toString());
                     String txtCalendarChange = "no changed calendar";
                     try{
                         JSONArray arr = jsonObject.getJSONArray("days");
                         txtCalendarChange = "";
                         for(int i = 0; i < arr.length(); i++){
+                            JSONObject startObj = arr.getJSONObject(i).getJSONObject("start");
+                            txtCalendarChange += startObj.getString("date");
+                            txtCalendarChange += " [ ";
                             txtCalendarChange += arr.getJSONObject(i).getString("summary");
+                            txtCalendarChange += " ] ";
                             txtCalendarChange += '\n';
                         }
 
