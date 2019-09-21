@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".WeatherActivity"
+    android:orientation="vertical"
+    android:gravity="center">
+
+    <Button
+        android:id="@+id/WeatherActivity_Button_goBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="뒤로가기"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS 위치를 구한 후 날씨 가져오기 예제"
+        android:textSize="20sp"
+        android:layout_marginBottom="30dp"/>
+
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_latitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="latitude : "/>
+
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_longitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="longitude : "/>
+
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_city"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="city : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_weather"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="weather : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_weatherDescription"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="weatherDescription : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_temperature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="temperature : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_temperatureMax"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="temperatureMax : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_temperatureMin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="temperatureMin : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_pressure"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="pressure : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_humidity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="humidity : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_windSpeed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="windSpeed : "/>
+    <TextView
+        android:id="@+id/WeatherActivity_TextView_clouds"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="clouds : "/>
+
+
+</LinearLayout>

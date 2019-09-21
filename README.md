@@ -21,6 +21,7 @@ SERVER URL : http://169.56.98.117/
 - GET  : /users 후 유저 정보 처리
 - GET  : /calendar/next/:nextCount -> AccessToken 을 활용한 서버에서 구글api 사용가능 확인
 - GET  : /calendar/next/10 을 통해 달력 정보 처리
+- GET  : /weather/:latitude/:longitude GPS로 위치 수신하고 서버로 날씨 요청
 ```
 
 

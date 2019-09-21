@@ -31,4 +31,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
+    <Button
+        android:id="@+id/MainActivity_Button_weatherTest"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="날씨 테스트"/>
+
 </LinearLayout>

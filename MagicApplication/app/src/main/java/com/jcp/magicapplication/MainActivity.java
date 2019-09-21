@@ -2,12 +2,16 @@ package com.jcp.magicapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.jcp.magicapplication.Session.SessionJWT;
+import com.jcp.magicapplication.http.HttpAsyncTask;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView txtName;
     private TextView txtCalendar;
+    private Button btnWeather;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,238 +51,62 @@ public class MainActivity extends AppCompatActivity {
 
         txtName = findViewById(R.id.MainActivity_TextView_Name);
         txtCalendar = findViewById(R.id.MainActivity_TextView_Calendar);
+        btnWeather = findViewById(R.id.MainActivity_Button_weatherTest);
 
-        new JSONHttpClient(JSONHttpClient.GET_USER_INFO, null, null).execute();
-        new JSONHttpClient(JSONHttpClient.GET_CALENDAR_NEXT, null, "10").execute();
 
-    }
 
-    /*
+        btnWeather.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(MainActivity.this, WeatherActivity.class));
+            }
+        });
 
-        로그인 후 JSON 방식으로
-        POST 요청을 할 때 이 클래스를 사용한다.
-        인증을 위한 토큰은 로그인이 된 상태를 가정하므로
-        SessionJWT 에서 호출한다.
+        new HttpAsyncTask(HttpAsyncTask.GET_USER_INFO, null, null, new HttpAsyncTask.AsyncResponse() {
+            @Override
+            public void processFinish(JSONObject resultData) {
+                /* UI 구성에 사용할 value 값 */
+                String txtChangeName = "no changed";
 
-    */
+                /* jsonObject 에서 value 값을 추출한다. */
+                try {
 
-    private class JSONHttpClient extends AsyncTask<String, JSONObject, JSONObject> {
+                    txtChangeName = resultData.getString("email");
 
-        /* 멤버 변수 */
-        private String sJwt;                                                                // 서버로 요청할 JWT 인증값
-        private final String SERVER_URL = getResources().getString(R.string.server_url);                           // 서버로 연결할 서버 URL
-        private final String SERVER_DIR[] = {
-                "/users/",                                                                  // GET_USER_INFO = 0
-                "/calendar/next/"                                                           // GET_CALENDAR  = 1
-        };
-        private final String SERVER_REQ_TYPE[] = {
-                "GET",                                                                      // GET_USER_INFO 요청방식
-                "GET"                                                                       // GET_CALENDAR 요청방식
-        };
-        private int option;                                                                 // 서버로 요청할 메서드
-        private JSONObject reqBody;                                                         // 요청 바디 값 POST 요청을 할 때 사용
-        private String reqParams;                                                           // 요청 파라미터 값 GET 요청을 할 때 사용
-        public static final int GET_USER_INFO = 0;                                          // 유저를 받아옴
-        public static final int GET_CALENDAR_NEXT = 1;                                           // 달력 10일을 받아옴.
+                    Log.d("****txtChangeName1 : ", txtChangeName);
 
-        /*
-
-            생성자
-            서버로 보낼 요청정보를 미리 받는다.
-
-        */
-        public JSONHttpClient(int option, JSONObject reqBody, String reqParams){
-            super();
-            this.option = option;
-            this.sJwt = SessionJWT.getInstance().getJwt();
-            this.reqBody = reqBody;
-            this.reqParams = reqParams;
-        }
-
-        /*
-
-            백그라운드에서 비동기적으로
-            Http Request 와 Response 를 수행한다.
-
-        */
-
-        @Override
-        protected JSONObject doInBackground(String... objects) {
-
-            try{
-
-                /*
-
-                    Request 에 실어 보낼 요소들을 모아
-                    JSON 객체를 받아 옴.
-                    GET 이냐 POST 방식이냐에 따라 다른 HttpURLConnection 을 사용하는 방식이 다름.
-
-                */
-
-                HttpURLConnection connection = null;
-                BufferedReader reader = null;
-
-                try{
-
-                    if(SERVER_REQ_TYPE[option].equals("POST")){
-
-                        /* 요청 방식이 POST 일 때 */
-
-                        /* 2번째 parameter 로 넘어온 URL 값으로 생성한 다음 해당 통신 오픈  */
-                        String strUrl = SERVER_URL + SERVER_DIR[option];
-                        URL url = new URL(strUrl);
-                        connection = (HttpURLConnection) url.openConnection();
-                        connection.setRequestMethod(SERVER_REQ_TYPE[option]);               // 전송 방식 : POST or GET
-                        connection.setRequestProperty("Cache-Control", "no-cache");         // 캐시 설정
-                        connection.setRequestProperty("Content-Type", "application/json");  // JSON 형식으로 전송
-                        connection.setRequestProperty("jwt", sJwt);                         // 헤더에 JWT 를 실어서 보냄(인증)
-                        connection.setDoOutput(true);                                       // Outputstream 으로 request
-                        connection.setDoInput(true);                                        // Inputstream 으로 response
-                        connection.connect();
-
-                        /* 서버에 전송하기 위한 스트림 생성 */
-                        OutputStream outStream = connection.getOutputStream();
-
-                        /* write 버퍼생성 및 내용 쓰기 */
-                        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outStream));
-                        if(reqBody != null){
-                            writer.write(reqBody.toString());
-                        }
-                        writer.flush();
-                        writer.close();
-
-                        /* 서버로 부터 데이터 수신을 위한 스트림 생성 */
-                        InputStream inStream = connection.getInputStream();
-
-                        /* read 버퍼생성 및 내용 읽기 */
-                        reader = new BufferedReader(new InputStreamReader(inStream));
-                        StringBuffer ret = new StringBuffer();
-                        String line = "";
-                        while((line = reader.readLine()) != null){
-                            ret.append(line);
-                        }
-
-                        /* 읽은 버퍼 값을 JSONObject 로 변환하여 리턴 */
-                        Log.d("*****MYTAG", "RESPONSE : "+ret.toString());
-                        return new JSONObject(ret.toString());
-
-                    }else if(SERVER_REQ_TYPE[option].equals("GET")){
-
-                        /* 요청방식이 GET 일 때 */
-                        String strUrl = SERVER_URL + SERVER_DIR[option];
-                        if(reqParams != null){
-                            strUrl += reqParams;
-                        }
-                        URL url = new URL(strUrl);
-                        connection = (HttpURLConnection) url.openConnection();
-                        connection.setRequestMethod(SERVER_REQ_TYPE[option]);               // 전송 방식 : POST or GET
-                        connection.setRequestProperty("Cache-Control", "no-cache");         // 캐시 설정
-                        connection.setRequestProperty("jwt", sJwt);                         // 헤더에 JWT 를 실어서 보냄(인증)
-                        //connection.setDoOutput(true);                                     // Outputstream 으로 request
-                        connection.setDoInput(true);                                        // Inputstream 으로 response
-                        connection.connect();
-
-                        /* 서버로 부터 데이터 수신을 위한 스트림 생성 */
-                        InputStream inStream = connection.getInputStream();
-
-                        /* read 버퍼생성 및 내용 읽기 */
-                        reader = new BufferedReader(new InputStreamReader(inStream));
-                        StringBuffer ret = new StringBuffer();
-                        String line = "";
-                        while((line = reader.readLine()) != null){
-                            ret.append(line);
-                        }
-
-                        /* 읽은 버퍼 값을 JSONObject 로 변환하여 리턴 */
-                        Log.d("*****MYTAG", "RESPONSE : "+ret.toString());
-                        return new JSONObject(ret.toString());
-
-                    }
-
-                }catch (MalformedURLException e){
+                } catch (Exception e) {
                     e.printStackTrace();
-                }catch (IOException e){
-                    e.printStackTrace();
-                }finally {
-
-                    /* 연결 후 종료 */
-                    if(connection != null){
-                        connection.disconnect();
-                    }
-
-                    /* read 버퍼도 닫음 */
-                    try {
-
-                        if(reader != null){
-                            reader.close();
-                        }
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
                 }
 
-            }catch (Exception e){
-                e.printStackTrace();
+                txtName.setText(txtChangeName);
             }
+        }).execute();
 
-            return null;
-        }
-
-        /*
-
-            doInBackground 에서 서버로 부터
-            response 받은 JSONObject 를 사용해 UI 처리를 한다.
-
-        */
-        @Override
-        protected void onPostExecute(JSONObject jsonObject) {
-            super.onPostExecute(jsonObject);
-
-            switch (option){
-                case GET_USER_INFO:
-                    /* UI 구성에 사용할 value 값 */
-                    String txtChangeName = "no changed";
-
-                    /* jsonObject 에서 value 값을 추출한다. */
-                    try {
-
-                        txtChangeName = jsonObject.getString("email");
-
-                        Log.d("****txtChangeName1 : ", txtChangeName);
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
+        new HttpAsyncTask(HttpAsyncTask.GET_CALENDAR_NEXT, null, "10", new HttpAsyncTask.AsyncResponse() {
+            @Override
+            public void processFinish(JSONObject resultData) {
+                Log.d("txtCalendarChange : ", resultData.toString());
+                String txtCalendarChange = "no changed calendar";
+                try{
+                    JSONArray arr = resultData.getJSONArray("days");
+                    txtCalendarChange = "";
+                    for(int i = 0; i < arr.length(); i++){
+                        JSONObject startObj = arr.getJSONObject(i).getJSONObject("start");
+                        txtCalendarChange += startObj.getString("date");
+                        txtCalendarChange += " [ ";
+                        txtCalendarChange += arr.getJSONObject(i).getString("summary");
+                        txtCalendarChange += " ] ";
+                        txtCalendarChange += '\n';
                     }
 
-                    txtName.setText(txtChangeName);
-                    break;
-                case GET_CALENDAR_NEXT:
-                    Log.d("txtCalendarChange : ", jsonObject.toString());
-                    String txtCalendarChange = "no changed calendar";
-                    try{
-                        JSONArray arr = jsonObject.getJSONArray("days");
-                        txtCalendarChange = "";
-                        for(int i = 0; i < arr.length(); i++){
-                            JSONObject startObj = arr.getJSONObject(i).getJSONObject("start");
-                            txtCalendarChange += startObj.getString("date");
-                            txtCalendarChange += " [ ";
-                            txtCalendarChange += arr.getJSONObject(i).getString("summary");
-                            txtCalendarChange += " ] ";
-                            txtCalendarChange += '\n';
-                        }
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
 
-                    }catch(Exception e){
-                        e.printStackTrace();
-                    }
-
-                    txtCalendar.setText(txtCalendarChange);
-                    break;
-
+                txtCalendar.setText(txtCalendarChange);
             }
-
-        }
+        }).execute();
 
     }
 
